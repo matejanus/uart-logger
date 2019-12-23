@@ -20,12 +20,12 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include "uart_driver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -51,23 +51,11 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-volatile uint8_t TxCpltFlag = 1;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-
-//void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-//{
-////	while(1);
-//	TxCpltFlag = 1;
-//}
-//
-//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-//{
-//	while(1);
-//}
 /* USER CODE END 0 */
 
 /**
@@ -99,9 +87,8 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  uart_driver_init(UART_DEBUG, BAUD_115200, false);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -117,7 +104,7 @@ int main(void)
 		uint16_t s = 0;
 		uint8_t i =10;
 		s = sprintf(str, "this can be a verry looooooooooooong lod data structure: %i\r\n", i);
-		send(&huart2, str, s);
+		send(UART_DEBUG, str, s);
 //		if(TxCpltFlag)
 //		{
 //			HAL_UART_Transmit_DMA(&huart2, str, s);
