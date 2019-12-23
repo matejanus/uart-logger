@@ -25,7 +25,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-#include "uart_driver.h"
+#include "logger.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,24 +39,13 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-uint8_t uartRx[10] = {0};
-int cnt_idx = 0;
 
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-static void logger_uart_callback(uint8_t data){
-	uartRx[cnt_idx] = data;
 
-	if(data == '\n'){
-		int i =0;
-	}
-	 else{
-		 cnt_idx++;
-	 }
-}
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -99,8 +88,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-  uart_driver_init(UART_DEBUG, BAUD_115200, false);
-  uart_driver_register_callback(UART_DEBUG, logger_uart_callback);
+  logger_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -116,12 +104,13 @@ int main(void)
 		uint16_t s = 0;
 		uint8_t i =10;
 		s = sprintf(str, "this can be a verry looooooooooooong lod data structure: %i\r\n", i);
-		send(UART_DEBUG, str, s);
+//		send(UART_DEBUG, str, s);
 //		if(TxCpltFlag)
 //		{
 //			HAL_UART_Transmit_DMA(&huart2, str, s);
 //			TxCpltFlag = 0;
 //		}
+		logger_send(LOG_INFO, "hello\r\n");
 	  HAL_Delay(500);
 //	  HAL_UART_Transmit_DMA(&huart2, dma_buffer, 2000);
 
