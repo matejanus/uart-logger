@@ -20,7 +20,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "dma.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -52,8 +51,6 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-uint8_t TxBuffer[10] = {20,21,22,23,24,25,26,27,28,29};
-uint8_t RxBuffer[10];
 volatile uint8_t TxCpltFlag = 1;
 /* USER CODE END PFP */
 
@@ -61,16 +58,16 @@ volatile uint8_t TxCpltFlag = 1;
 /* USER CODE BEGIN 0 */
 
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
+//void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+//{
+////	while(1);
+//	TxCpltFlag = 1;
+//}
+//
+//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+//{
 //	while(1);
-	TxCpltFlag = 1;
-}
-
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-	while(1);
-}
+//}
 /* USER CODE END 0 */
 
 /**
@@ -102,8 +99,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
@@ -122,12 +117,12 @@ int main(void)
 		uint16_t s = 0;
 		uint8_t i =10;
 		s = sprintf(str, "this can be a verry looooooooooooong lod data structure: %i\r\n", i);
-//		HAL_UART_Transmit(&huart1, "test\r\n", sizeof("test\r\n"),1000);
-		if(TxCpltFlag)
-		{
-			HAL_UART_Transmit_DMA(&huart2, str, s);
-			TxCpltFlag = 0;
-		}
+		send(&huart2, str, s);
+//		if(TxCpltFlag)
+//		{
+//			HAL_UART_Transmit_DMA(&huart2, str, s);
+//			TxCpltFlag = 0;
+//		}
 	  HAL_Delay(500);
 //	  HAL_UART_Transmit_DMA(&huart2, dma_buffer, 2000);
 
