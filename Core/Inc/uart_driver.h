@@ -27,4 +27,7 @@ void uart_driver_init(enum uart_device device, enum uart_baudrate baud, bool han
 void uart_driver_deinit(enum uart_device device);
 void send(enum uart_device device, const char* data, uint16_t size);
 
+void uart_driver_send(enum uart_device device, uint8_t data[], uint16_t len);
+void uart_driver_send_string(enum uart_device device, const char* data);
+void uart_driver_register_callback(enum uart_device device, uart_driver_callback callback);
 

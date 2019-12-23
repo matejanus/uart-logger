@@ -39,13 +39,24 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+uint8_t uartRx[10] = {0};
+int cnt_idx = 0;
 
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+static void logger_uart_callback(uint8_t data){
+	uartRx[cnt_idx] = data;
 
+	if(data == '\n'){
+		int i =0;
+	}
+	 else{
+		 cnt_idx++;
+	 }
+}
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -89,6 +100,7 @@ int main(void)
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
   uart_driver_init(UART_DEBUG, BAUD_115200, false);
+  uart_driver_register_callback(UART_DEBUG, logger_uart_callback);
   /* USER CODE END 2 */
 
   /* Infinite loop */

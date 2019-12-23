@@ -99,6 +99,43 @@ void send(enum uart_device device, const char* data, uint16_t size)
 	HAL_UART_Transmit_IT(&UartHandle[device], data, size);
 }
 
+void uart_driver_send_string(enum uart_device device, const char* data)
+{
+    uint16_t len = strlen(data);
+    uart_driver_send(device, (uint8_t*) data, len);
+}
+
+void uart_driver_send(enum uart_device device, uint8_t data[], uint16_t len)
+{
+    HAL_UART_Transmit_IT(&UartHandle[device], data, len);
+}
+
+void uart_driver_register_callback(enum uart_device device, uart_driver_callback callback)
+{
+    if(device >= UART_COUNT) {
+        assert(false);
+        return;
+    }
+
+    uart_driver_clb[device] = callback;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    enum uart_device device;
+
+    if(huart->Instance == USART1){
+        device = UART_BLE;
+    }else{
+        device = UART_DEBUG;
+    }
+
+    if(uart_driver_clb[device] != NULL)
+        uart_driver_clb[device](uart_rx_buffer[device]);
+
+    HAL_UART_Receive_IT(huart, &uart_rx_buffer[device], 1);
+}
+
 void USART2_IRQHandler(void)
 {
     HAL_UART_IRQHandler(&UartHandle[UART_DEBUG] );
