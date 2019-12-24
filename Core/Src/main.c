@@ -125,7 +125,7 @@ int main(void)
 //		HAL_UART_Transmit(&huart1, "test\r\n", sizeof("test\r\n"),1000);
 		if(TxCpltFlag)
 		{
-			HAL_UART_Transmit_DMA(&huart2, str, s);
+			HAL_UART_Transmit_DMA(&huart2, (uint8_t *)str, s);
 			TxCpltFlag = 0;
 		}
 	  HAL_Delay(500);
