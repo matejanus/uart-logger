@@ -21,4 +21,4 @@ enum logger_level{
 };
 
 void logger_init(void);
-void logger_send(enum logger_level level, const char* data);
+void logger_send(const char* data);

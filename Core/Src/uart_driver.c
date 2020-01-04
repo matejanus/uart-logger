@@ -4,140 +4,120 @@
  *  Created on: Dec 23, 2019
  *      Author: janus
  */
-
 #include "uart_driver.h"
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include "stm32f4xx_hal.h"
+#include "FifoBuffer.h"
 
-static UART_HandleTypeDef UartHandle[UART_COUNT];
-static uart_driver_callback uart_driver_clb[UART_COUNT] = {NULL, NULL};
-static uint8_t uart_rx_buffer[UART_COUNT];
+UART_HandleTypeDef uartHandle;
+
+#define TX_FIFO_BUFFER_SIZE  256
+
+#define USART_PORT USART2
+#define USART_IRQ USART2_IRQn
+
+static FifoBufferObj txFifo;
+static char txFifoBuffer[TX_FIFO_BUFFER_SIZE];
+static bool transmissionOngoing;
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
     /* TXE handler */
     char c;
-}
-
-
-void uart_driver_init(enum uart_device device, enum uart_baudrate baud, bool handshake)
-{
-    static const uint32_t baud_table[BAUD_COUNT] = {115200, 115200};
-
-    if(device >= UART_COUNT || baud >= BAUD_COUNT){
-        assert(false); //remove from production code
-        return;
-    }
-    memset(&UartHandle[device], 0, sizeof(UART_HandleTypeDef));
-
-    if(device == UART_DEBUG) {
-        GPIO_InitTypeDef  GPIO_InitStruct;
-        memset(&GPIO_InitStruct, 0, sizeof(GPIO_InitStruct));
-
-        UartHandle[device].Instance = USART2;
-
-        /* Peripheral clock enable */
-        __HAL_RCC_USART2_CLK_ENABLE();
-
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-        /**USART2 GPIO Configuration
-        PA2     ------> USART2_TX
-        PA3     ------> USART2_RX
-        PA0     ------> USART2_CTS
-        PA1     ------> USART2_RTS
-         */
-        if (handshake == true) {
-       /*     GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
-            GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-            GPIO_InitStruct.Pull = GPIO_NOPULL;
-            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-            GPIO_InitStruct.Alternate = GPIO_AF4_USART2;
-            HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);*/
+    if(huart == &uartHandle) {
+        if( Fifo_getNumberOfElements( &txFifo ) > 0 ) {
+            if( Fifo_pop( &txFifo, &c ) ) {
+                HAL_UART_Transmit_IT(&uartHandle, (uint8_t*)(&c), 1);
+                transmissionOngoing = 1;
+            }
+        } else {
+            transmissionOngoing = 0;
         }
-
-        /**USART2 GPIO Configuration
-        */
-        GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-        GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
-        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
     }
-
-       UartHandle[device].Init.BaudRate   = baud_table[baud];
-       UartHandle[device].Init.WordLength = UART_WORDLENGTH_8B;
-       UartHandle[device].Init.StopBits   = UART_STOPBITS_1;
-       UartHandle[device].Init.Parity     = UART_PARITY_NONE;
-       UartHandle[device].Init.Mode       = UART_MODE_TX_RX;
-       UartHandle[device].Init.HwFlowCtl  = handshake == true ? UART_HWCONTROL_RTS_CTS : UART_HWCONTROL_NONE;
-       UartHandle[device].Init.OverSampling = UART_OVERSAMPLING_16;
-
-       if(HAL_UART_Init(&UartHandle[device]) != HAL_OK) {
-           assert(false);
-           return;
-       }
-
-       HAL_UART_Receive_IT(&UartHandle[device], &uart_rx_buffer[device], 1);
-
-       if(device == UART_DEBUG) {
-    	   HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
-		   HAL_NVIC_EnableIRQ(USART2_IRQn);
-       }
-
 }
 
-void uart_driver_deinit(enum uart_device device)
-{
+void initSerialLogger(void) {
+	__HAL_RCC_USART2_CLK_ENABLE();
 
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+	/**USART2 GPIO Configuration
+	 PA2     ------> USART2_TX
+	 PA3     ------> USART2_RX
+	 */
+	GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+	GPIO_InitStruct.Pin = GPIO_PIN_2 | GPIO_PIN_3;
+	GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
+	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(USART2_IRQn);
+
+	uartHandle.Instance = USART2;
+	uartHandle.Init.BaudRate = 115200;
+	uartHandle.Init.WordLength = UART_WORDLENGTH_8B;
+	uartHandle.Init.StopBits = UART_STOPBITS_1;
+	uartHandle.Init.Parity = UART_PARITY_NONE;
+	uartHandle.Init.Mode = UART_MODE_TX_RX;
+	uartHandle.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+	uartHandle.Init.OverSampling = UART_OVERSAMPLING_16;
+	if (HAL_UART_Init(&uartHandle) != HAL_OK) {
+		Error_Handler();
+	}
+
+	transmissionOngoing = false;
+	Fifo_initialize(&txFifo, txFifoBuffer, TX_FIFO_BUFFER_SIZE);
+}
+void startTransmission(void) {
+	char c;
+	if (transmissionOngoing)
+		return;
+	if (Fifo_getNumberOfElements(&txFifo) > 0) {
+		Fifo_pop(&txFifo, &c);
+		HAL_UART_Transmit_IT(&uartHandle, (uint8_t *)(&c), 1);
+		transmissionOngoing = 1;
+	}
+}
+bool isTransmissionOngoing(void) {
+	return transmissionOngoing;
 }
 
-
-void send(enum uart_device device, const char* data, uint16_t size)
-{
-	HAL_UART_Transmit_IT(&UartHandle[device], data, size);
+void enqueue_char(char _char) {
+	Fifo_push(&txFifo, _char);
 }
-
-void uart_driver_send_string(enum uart_device device, const char* data)
-{
-    uint16_t len = strlen(data);
-    uart_driver_send(device, (uint8_t*) data, len);
+void enqueue_string(const char *_string) {
+	Fifo_push_string(&txFifo, _string);
 }
-
-void uart_driver_send(enum uart_device device, uint8_t data[], uint16_t len)
-{
-    HAL_UART_Transmit_IT(&UartHandle[device], data, len);
+void logData(const char *_line) {
+	Fifo_push_string(&txFifo, _line);
+	Fifo_push(&txFifo, '\r');
+	Fifo_push(&txFifo, '\n');
+	startTransmission();
 }
-
-void uart_driver_register_callback(enum uart_device device, uart_driver_callback callback)
-{
-    if(device >= UART_COUNT) {
-        assert(false);
-        return;
-    }
-
-    uart_driver_clb[device] = callback;
+void logValue(const char *_line, int _value) {
+	Fifo_push_string(&txFifo, _line);
+	Fifo_push(&txFifo, ':');
+	Fifo_push(&txFifo, ' ');
+	char valueStr[20];
+	itoa(_value, valueStr, 10);
+	Fifo_push_string(&txFifo, valueStr);
+	Fifo_push(&txFifo, '\r');
+	Fifo_push(&txFifo, '\n');
+	startTransmission();
 }
-
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    enum uart_device device;
-
-    if(huart->Instance == USART1){
-        device = UART_BLE;
-    }else{
-        device = UART_DEBUG;
-    }
-
-    if(uart_driver_clb[device] != NULL)
-        uart_driver_clb[device](uart_rx_buffer[device]);
-
-    HAL_UART_Receive_IT(huart, &uart_rx_buffer[device], 1);
+void logString(const char *_line, const char *_string) {
+	Fifo_push_string(&txFifo, _line);
+	Fifo_push(&txFifo, ':');
+	Fifo_push(&txFifo, ' ');
+	Fifo_push_string(&txFifo, _string);
+	Fifo_push(&txFifo, '\r');
+	Fifo_push(&txFifo, '\n');
+	startTransmission();
 }
 
 void USART2_IRQHandler(void)
 {
-    HAL_UART_IRQHandler(&UartHandle[UART_DEBUG] );
+  HAL_UART_IRQHandler(&uartHandle);
 }
 

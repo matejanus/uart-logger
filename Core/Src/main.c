@@ -101,16 +101,15 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	  char str[100] = {0};
-		uint16_t s = 0;
 		uint8_t i =10;
-		s = sprintf(str, "this can be a verry looooooooooooong lod data structure: %i\r\n", i);
+		sprintf(str, "this can be a verry looooooooooooong lod data structure: %i\r\n", i);
 //		send(UART_DEBUG, str, s);
 //		if(TxCpltFlag)
 //		{
 //			HAL_UART_Transmit_DMA(&huart2, str, s);
 //			TxCpltFlag = 0;
 //		}
-		logger_send(LOG_INFO, "hello\r\n");
+		logger_send(str);
 	  HAL_Delay(500);
 //	  HAL_UART_Transmit_DMA(&huart2, dma_buffer, 2000);
 
